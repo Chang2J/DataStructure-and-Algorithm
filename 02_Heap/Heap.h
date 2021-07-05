@@ -186,4 +186,164 @@ private:
         line[offset_right + 0] = '\\';
     }
 };
+
+/*
+ * 索引最大堆
+ */
+template <typename Item>
+class IndexMaxHeap {
+
+private:
+    Item* data;
+    int* indexes;
+    int* reverse;
+    int count;
+    int capacity;
+
+    void shiftUp(int k) {
+        // 该结点的值大于其父结点，且该结点不为根结点
+        while(k >= 2 && data[ indexes[k/2] ] < data[ indexes[k] ]) {
+            std::swap(indexes[k/2], indexes[k]);
+            reverse[indexes[k/2]] = k/2;
+            reverse[indexes[k]] = k;
+            k = k/2;
+        }
+    }
+
+    void shiftDown(int k) {
+        // 该结点有子结点
+        while(2*k <= count) {
+            // 该结点默认与其左孩子交换
+            int j = 2*k;
+
+            // 如果存在右孩子，且右孩子最大，则与右孩子交换
+            if (j+1 <= count && data[indexes[j+1]] > data[indexes[j]] )
+                j = j+1;
+
+            // 该结点大于其子结点
+            if (data[indexes[k]] >= data[indexes[j]])
+                break;
+
+            std::swap(indexes[k], indexes[j]);
+            reverse[indexes[k]] = k;
+            reverse[indexes[j]] = j;
+            k = j;
+        }
+    }
+
+public:
+    // 构造函数
+    IndexMaxHeap(int n) {
+        // 最大堆存储，数组索引从 1 开始
+        data = new Item[capacity+1];
+        indexes = new int[capacity+1];
+        reverse = new int[capacity+1];
+
+        for (int i = 0; i <= capacity; i++)
+            reverse[i] = 0;
+
+        count = 0;
+        this->capacity = n;
+    }
+
+    // 析构函数
+    ~IndexMaxHeap() {
+        delete[] data;
+        delete[] indexes;
+        delete[] reverse;
+    }
+
+    int size() {
+        return count;
+    }
+
+    bool isEmpty() {
+        return count == 0;
+    }
+
+    // 向堆中插入元素
+    // i 为插入元素索引，对用户而言，从 0 开始索引
+    // 堆内部从 1 开始索引，外部数组从 0 开始
+    void insert(int i, Item item) {
+        assert(count+1 <= capacity);
+        assert(i+1 >= 1 && i+1 <= capacity);  // 数组索引不越界
+
+        i = i+1;  // 在堆内部，i 从 1 开始索引
+        data[i] = item;
+        indexes[count+1] = i;
+        reverse[i] = count + 1;
+
+        count++;
+        shiftUp(count);
+    }
+
+    // 从堆中取出元素（优先级最高元素）
+    Item extractMax() {
+        assert(count >= 1);
+
+        Item ret = data[ indexes[1] ];
+
+        std::swap(indexes[1], indexes[count]);
+        reverse[indexes[1]] = 1;
+        reverse[indexes[count]] = 0;
+        count--;
+
+        shiftDown(1);
+        return ret;
+    }
+
+    // 返回最大元素索引
+    Item extractMaxIndex() {
+        assert(count >= 1);
+
+        int ret = indexes[1] - 1;
+
+        std::swap(indexes[1], indexes[count]);
+        reverse[indexes[1]] = 1;
+        reverse[indexes[count]] = 0;
+        count--;
+
+        shiftDown(1);
+        return ret;
+    }
+
+    // 判断堆中是否包含索引 i
+    bool contain(int i) {
+        assert(i+1 >= 1 && i+1 <= capacity);
+        return reverse[i+1] == 0;
+    }
+
+    // 根据索引值获取数据
+    Item getItem(int i) {
+
+        assert(contain(i));
+
+        return data[i+1];
+    }
+
+    // 修改索引数据
+    void change(int i, Item newItem) {
+
+        assert(contain(i));
+
+        i = i+1;
+        data[i] = newItem;
+
+//        // 找到 indexes[j] = i, j 表示 data[i] 在堆中位置
+//        // shifUp(j) shiftDown(j)
+//        for (int j = 1; j <= count; j++) {
+//            if (indexes[j] == data[i]) {
+//                shiftUp(j);
+//                shiftDown(j);
+//                return;
+//            }
+//        }
+
+        // 找到 indexes[j] = i
+        int j = reverse[i];
+        shiftUp(j);
+        shiftDown(j);
+    }
+};
+
 #endif //INC_02_HEAP_HEAP_H
